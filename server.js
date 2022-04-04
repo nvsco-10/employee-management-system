@@ -27,7 +27,7 @@ const questions = [
     }
 ];
 
-async function loadDb() {
+async function loadTasks() {
     const result = await inquirer.prompt(questions);
 
     switch(result.task) {
@@ -58,7 +58,23 @@ async function loadDb() {
     }
 }
 
-loadDb();
+loadTasks();
+
+function viewRoles() {
+    const query = 'SELECT role.id, role.title, department.name AS department, role.salary FROM role INNER JOIN department ON role.department_id = department.id';
+
+    db.query(query, (err, results) => {
+        console.table(results);
+    })
+}
+
+function viewDepartments() {
+    db.query('SELECT id, name FROM department', (err, results) => {
+        console.table(results);
+    })
+
+    loadTasks();
+}
 
 const db = mysql.createConnection(
     {
@@ -69,10 +85,6 @@ const db = mysql.createConnection(
     },
     console.log('Connected to the employee_db database.')
 );
-
-// db.query('SELECT * FROM employee', (err, results) => {
-//     console.log(results);
-// })
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
