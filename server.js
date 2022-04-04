@@ -60,6 +60,14 @@ async function loadTasks() {
 
 loadTasks();
 
+function viewEmployees() {
+    const query = 'SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary, employee.manager_id FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id';
+
+    db.query(query, (err, results) => {
+        console.table(results);
+    })
+}
+
 function viewRoles() {
     const query = 'SELECT role.id, role.title, department.name AS department, role.salary FROM role INNER JOIN department ON role.department_id = department.id';
 
