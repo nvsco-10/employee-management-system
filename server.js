@@ -60,6 +60,59 @@ async function loadTasks() {
 
 loadTasks();
 
+async function addRole() {
+    const result = await inquirer.prompt([
+        {
+            type: "input",
+            name: "title",
+            message: "What is the name of the role you would like to add?",
+            validate: title => {
+                if (title) {
+                    return true;
+                } else {
+                    return 'Please enter a role.';
+                }
+            }
+        },
+        {
+            type: "input",
+                name: "salary",
+                message: "What is the salary for this role?",
+                validate: salary => {
+                    if (isNaN(salary)) {
+                        return 'Please enter an amount';
+                    } else {
+                        return true;
+                    }
+                }
+        }
+    ]);
+
+    const searchDept = 'SELECT * FROM department'
+    const searchResults = await db.promise().query(searchDept);
+    const departments = searchResults[0].map(({ id, name }) => ({value: id, name: name}));
+    console.log(departments);
+
+    const askDept = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'dept',
+            message: "Which department does this role belong to?",
+            choices: departments
+        }
+    ])
+
+    const query = 'INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)';
+    db.query(query, [result.title, result.salary, askDept.dept], (err, results) => {
+        if(err) {
+            throw err;
+        } else {
+            console.log(`Successfully added new role: ${result.title}.`);
+            viewRoles();
+        }
+    })
+}
+
 async function addDepartment() {
     const result = await inquirer.prompt([
         {
