@@ -17,11 +17,14 @@ const questions = [
             "View all departments",
             "View all roles",
             "View all employees",
+            "View employees by department",
             "View department budget",
             "Add a department",
             "Add a role",
             "Add an employee",
             "Update an employee role",
+            "Delete department",
+            "Delete role",
             "Exit"
         ]
     }
@@ -41,6 +44,9 @@ async function loadTasks() {
         case "View all employees":
             viewEmployees();
             break;
+        case "View employees by department":
+            viewByDept();
+            break;
         case "View department budget":
             viewBudget();
             break;        
@@ -56,12 +62,87 @@ async function loadTasks() {
         case "Update an employee role":
             updateRole();
             break;
+        case "Delete department":
+            deleteDept();
+            break;
+        case "Delete role":
+            deleteRole();
+            break;
         case "Exit":
             exitDb(); 
     }
 }
 
-async function viewBudget() {
+async function deleteRole() {
+    const rolesResults = await db.promise().query('SELECT id, title FROM role');
+    const roles = rolesResults[0].map(({ id, title }) => ({ value: id, name: title }));
+
+    const result = await inquirer.prompt([
+        {
+            type: "list",
+            name: "role",
+            message: "Which role would you like to delete?",
+            choices: roles
+        }
+    ])
+
+    const query = 'DELETE FROM role WHERE id = ?';
+
+    db.query(query, result.role, (err,results) => {
+        if(err) throw err;
+
+        console.log("Successfully deleted role!")
+        viewRoles();
+    })
+}
+
+async function deleteDept() {
+    const deptResults = await db.promise().query('SELECT id, name FROM department');
+    const departments = deptResults[0].map(({ id, name }) => ({ value: id, name: name }));
+
+    const result = await inquirer.prompt([
+        {
+            type: "list",
+            name: "dept",
+            message: "Which department would you like to delete?",
+            choices: departments
+        }
+    ])
+
+    const query = 'DELETE FROM department WHERE id = ?';
+
+    db.query(query, result.dept, (err,results) => {
+        if(err) throw err;
+
+        console.log("Successfully deleted department!")
+        viewDepartments();
+    })
+}
+
+async function viewByDept() {
+    const deptResults = await db.promise().query('SELECT id, name FROM department');
+    const departments = deptResults[0].map(({ id, name }) => ({ value: id, name: name }))
+
+    const result = await inquirer.prompt([
+        {
+            type: "list",
+            name: "dept",
+            message: "Which department would you like to view?",
+            choices: departments
+        }
+    ])
+
+    const query = 'SELECT CONCAT(employee.first_name, " ", employee.last_name) AS employee, title AS role FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id WHERE department.id = ?';
+
+    db.query(query, result.dept, (err,results) => {
+        if(err) throw err;
+
+        console.table(results);
+        loadTasks();
+    })
+}
+
+function viewBudget() {
     const query = 'SELECT name as department, COUNT(employee.role_id) AS employees, SUM(salary) AS "total utilized budget" FROM department JOIN role ON department.id = role.department_id JOIN employee ON employee.role_id = role.id GROUP by name'
 
     db.query(query, (err,results) => {
@@ -102,7 +183,7 @@ async function updateRole() {
 
         if(err) throw err;
        
-        console.log('Successfully updated role.');
+        console.log('Successfully updated role!');
         viewEmployees();
         
     })
