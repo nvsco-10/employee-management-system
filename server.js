@@ -60,6 +60,46 @@ async function loadTasks() {
 
 loadTasks();
 
+// TO DO : ADD EMPLOYEE FUNCTION
+
+async function updateRole() {
+    
+    const employeeResults = await db.promise().query('SELECT id, first_name, last_name FROM employee');
+    const employees = employeeResults[0].map(({ id, first_name, last_name }) => ({ value: id, name: `${first_name} ${last_name}` }))
+    console.log(employees);
+
+    const rolesResults = await db.promise().query('SELECT id, title FROM role');
+    const roles = rolesResults[0].map(({ id, title }) => ({ value: id, name: title }))
+    console.log(roles);
+
+
+    const result = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'employee',
+            message: "Which employee's role do you want to update?",
+            choices: employees
+        },
+        {
+            type: 'list',
+            name: 'role',
+            message: "Which role do you want to assign the selected employee?",
+            choices: roles
+        },
+
+    ])
+
+    const query = 'UPDATE employee SET role_id = ? WHERE id = ?';
+    db.query(query, [result.role, result.employee], (err, results) => {
+        if(err) {
+            throw err;
+        } else {
+            console.log('Successfully updated role.');
+            viewEmployees();
+        }
+    })
+}
+
 async function addRole() {
     const result = await inquirer.prompt([
         {
@@ -76,15 +116,15 @@ async function addRole() {
         },
         {
             type: "input",
-                name: "salary",
-                message: "What is the salary for this role?",
-                validate: salary => {
-                    if (isNaN(salary)) {
-                        return 'Please enter an amount';
-                    } else {
-                        return true;
-                    }
+            name: "salary",
+            message: "What is the salary for this role?",
+            validate: salary => {
+                if (isNaN(salary)) {
+                    return 'Please enter an amount';
+                } else {
+                    return true;
                 }
+            }
         }
     ]);
 
