@@ -5,7 +5,6 @@ const mysql = require('mysql2');
 const PORT = process.env.PORT || 3001;
 const app = express();
 
-// Express middleware
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
@@ -53,14 +52,9 @@ async function loadTasks() {
             updateRole();
             break;
         case "Exit":
-            return '';
-            break;    
+            exitDb(); 
     }
 }
-
-loadTasks();
-
-// TO DO : ADD EMPLOYEE FUNCTION
 
 async function updateRole() {
     
@@ -100,6 +94,74 @@ async function updateRole() {
     })
 }
 
+async function addEmployee() {
+    const result = await inquirer.prompt([
+        {
+            type: "input",
+            name: "first",
+            message: "What is the employee's first name?",
+            validate: first => {
+                if (first) {
+                    return true;
+                } else {
+                    return 'Please enter a first name.';
+                }
+            }
+        },
+        {
+            type: "input",
+            name: "last",
+            message: "What is the employee's last name?",
+            validate: last => {
+                if (last) {
+                    return true;
+                } else {
+                    return 'Please enter a last name.';
+                }
+            }
+        }
+    ])
+
+    const rolesResults = await db.promise().query('SELECT id, title FROM role');
+    const roles = rolesResults[0].map(({ id, title }) => ({ value: id, name: title }))
+
+
+    const askRole = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'role',
+            message: "What is the employee's role?",
+            choices: roles
+        }
+    ])
+
+    const managerResults = await db.promise().query('SELECT first_name, last_name, manager_id FROM employee');
+    const managers = managerResults[0].map(({ first_name, last_name, manager_id }) => ({ value: manager_id, name: `${first_name} ${last_name}` }))
+
+    // Add the option to select no manager, will return null
+    managers.push({value: null, name: 'None'})
+
+    const askManager = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'manager',
+            message: "Who is the employee's manager?",
+            choices: managers
+        }
+    ])
+
+    const query = 'INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)';
+    db.query(query, [result.first, result.last, askRole.role, askManager.manager], (err, results) => {
+        if(err) {
+            throw err;
+        } else {
+            console.log(`Successfully added new employee: ${result.first} ${result.last}.`);
+            viewEmployees();
+        }
+    })
+
+}
+
 async function addRole() {
     const result = await inquirer.prompt([
         {
@@ -131,7 +193,6 @@ async function addRole() {
     const searchDept = 'SELECT * FROM department'
     const searchResults = await db.promise().query(searchDept);
     const departments = searchResults[0].map(({ id, name }) => ({value: id, name: name}));
-    console.log(departments);
 
     const askDept = await inquirer.prompt([
         {
@@ -176,17 +237,28 @@ async function addDepartment() {
         } else {
             console.log(`Successfully added new department: ${result.dept}.`);
             viewDepartments();
+            loadTasks();
         }
     })
 
 }
 
 function viewEmployees() {
-    //TO DO: SHOW MANAGER NAME INSTEAD OF ID!!
-    const query = 'SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary, employee.manager_id AS manager FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id';
+    const query = `SELECT employee.id,
+                          employee.first_name, 
+                          employee.last_name, 
+                          role.title AS title, 
+                          department.name AS department, 
+                          role.salary, 
+                          CONCAT (manager.first_name, " ", manager.last_name) AS manager FROM employee 
+                          INNER JOIN role ON employee.role_id = role.id 
+                          INNER JOIN department ON role.department_id = department.id LEFT JOIN employee manager ON employee.manager_id = manager.id`;
 
     db.query(query, (err, results) => {
+        if(err) console.error(err);
+
         console.table(results);
+        loadTasks();
     })
 }
 
@@ -195,16 +267,33 @@ function viewRoles() {
 
     db.query(query, (err, results) => {
         console.table(results);
+        loadTasks();
     })
 }
 
 function viewDepartments() {
     db.query('SELECT id, name FROM department', (err, results) => {
         console.table(results);
+        loadTasks();
     })
-
-    loadTasks();
 }
+
+function exitDb() {
+    db.end();
+    console.log("Exited Employee Database.")
+}
+
+function init() {
+  console.log('|=================================|');
+  console.log('|                                 |');
+  console.log('|        EMPLOYEE DATABASE        |');
+  console.log('|                                 |');
+  console.log('|=================================|');
+
+  loadTasks();
+}
+
+init();
 
 const db = mysql.createConnection(
     {
