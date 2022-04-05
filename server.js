@@ -41,7 +41,7 @@ async function loadTasks() {
             viewEmployees();
             break;      
         case "Add a department":
-            addDepertment();
+            addDepartment();
             break;     
         case "Add a role":
             addRole();
@@ -60,8 +60,37 @@ async function loadTasks() {
 
 loadTasks();
 
+async function addDepartment() {
+    const result = await inquirer.prompt([
+        {
+            type: "input",
+            name: "dept",
+            message: "What department would you like to add?",
+            validate: dept => {
+                if (dept) {
+                    return true;
+                } else {
+                    return 'Please enter a department name';
+                }
+            }
+        }
+    ]);
+
+    const query = 'INSERT INTO department (name) VALUES (?)';
+    db.query(query, result.dept, (err, results) => {
+        if(err) {
+            throw err;
+        } else {
+            console.log(`Successfully added new department: ${result.dept}.`);
+            viewDepartments();
+        }
+    })
+
+}
+
 function viewEmployees() {
-    const query = 'SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary, employee.manager_id FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id';
+    //TO DO: SHOW MANAGER NAME INSTEAD OF ID!!
+    const query = 'SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary, employee.manager_id AS manager FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id';
 
     db.query(query, (err, results) => {
         console.table(results);
