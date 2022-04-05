@@ -17,6 +17,7 @@ const questions = [
             "View all departments",
             "View all roles",
             "View all employees",
+            "View department budget",
             "Add a department",
             "Add a role",
             "Add an employee",
@@ -27,6 +28,7 @@ const questions = [
 ];
 
 async function loadTasks() {
+
     const result = await inquirer.prompt(questions);
 
     switch(result.task) {
@@ -38,7 +40,10 @@ async function loadTasks() {
             break;
         case "View all employees":
             viewEmployees();
-            break;      
+            break;
+        case "View department budget":
+            viewBudget();
+            break;        
         case "Add a department":
             addDepartment();
             break;     
@@ -56,15 +61,24 @@ async function loadTasks() {
     }
 }
 
+async function viewBudget() {
+    const query = 'SELECT name as department, COUNT(employee.role_id) AS employees, SUM(salary) AS "total utilized budget" FROM department JOIN role ON department.id = role.department_id JOIN employee ON employee.role_id = role.id GROUP by name'
+
+    db.query(query, (err,results) => {
+        if (err) throw err;
+
+        console.table(results);
+        loadTasks();
+    })
+}
+
 async function updateRole() {
     
     const employeeResults = await db.promise().query('SELECT id, first_name, last_name FROM employee');
     const employees = employeeResults[0].map(({ id, first_name, last_name }) => ({ value: id, name: `${first_name} ${last_name}` }))
-    console.log(employees);
 
     const rolesResults = await db.promise().query('SELECT id, title FROM role');
     const roles = rolesResults[0].map(({ id, title }) => ({ value: id, name: title }))
-    console.log(roles);
 
 
     const result = await inquirer.prompt([
@@ -85,12 +99,12 @@ async function updateRole() {
 
     const query = 'UPDATE employee SET role_id = ? WHERE id = ?';
     db.query(query, [result.role, result.employee], (err, results) => {
-        if(err) {
-            throw err;
-        } else {
-            console.log('Successfully updated role.');
-            viewEmployees();
-        }
+
+        if(err) throw err;
+       
+        console.log('Successfully updated role.');
+        viewEmployees();
+        
     })
 }
 
@@ -100,31 +114,18 @@ async function addEmployee() {
             type: "input",
             name: "first",
             message: "What is the employee's first name?",
-            validate: first => {
-                if (first) {
-                    return true;
-                } else {
-                    return 'Please enter a first name.';
-                }
-            }
+            validate: first => first ? true : 'Please enter a first name'
         },
         {
             type: "input",
             name: "last",
             message: "What is the employee's last name?",
-            validate: last => {
-                if (last) {
-                    return true;
-                } else {
-                    return 'Please enter a last name.';
-                }
-            }
+            validate: last => last ? true : 'Please enter a last name'
         }
     ])
 
     const rolesResults = await db.promise().query('SELECT id, title FROM role');
     const roles = rolesResults[0].map(({ id, title }) => ({ value: id, name: title }))
-
 
     const askRole = await inquirer.prompt([
         {
@@ -151,46 +152,36 @@ async function addEmployee() {
     ])
 
     const query = 'INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)';
+
     db.query(query, [result.first, result.last, askRole.role, askManager.manager], (err, results) => {
-        if(err) {
-            throw err;
-        } else {
-            console.log(`Successfully added new employee: ${result.first} ${result.last}.`);
-            viewEmployees();
-        }
+
+        if(err) throw err;
+  
+        console.log(`Successfully added new employee: ${result.first} ${result.last}.`);
+        viewEmployees();
+        
     })
 
 }
 
 async function addRole() {
+
     const result = await inquirer.prompt([
         {
             type: "input",
             name: "title",
             message: "What is the name of the role you would like to add?",
-            validate: title => {
-                if (title) {
-                    return true;
-                } else {
-                    return 'Please enter a role.';
-                }
-            }
+            validate: title => title ? true : 'Please enter a role.' 
         },
         {
             type: "input",
             name: "salary",
             message: "What is the salary for this role?",
-            validate: salary => {
-                if (isNaN(salary)) {
-                    return 'Please enter an amount';
-                } else {
-                    return true;
-                }
-            }
+            validate: salary => isNaN(salary) || !(salary) ? 'Please enter an amount' : true
         }
     ]);
 
-    const searchDept = 'SELECT * FROM department'
+    const searchDept = 'SELECT id, name FROM department'
     const searchResults = await db.promise().query(searchDept);
     const departments = searchResults[0].map(({ id, name }) => ({value: id, name: name}));
 
@@ -204,13 +195,14 @@ async function addRole() {
     ])
 
     const query = 'INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)';
+
     db.query(query, [result.title, result.salary, askDept.dept], (err, results) => {
-        if(err) {
-            throw err;
-        } else {
-            console.log(`Successfully added new role: ${result.title}.`);
-            viewRoles();
-        }
+
+        if(err) throw err;
+
+        console.log(`Successfully added new role: ${result.title}.`);
+        viewRoles();
+        
     })
 }
 
@@ -220,30 +212,25 @@ async function addDepartment() {
             type: "input",
             name: "dept",
             message: "What department would you like to add?",
-            validate: dept => {
-                if (dept) {
-                    return true;
-                } else {
-                    return 'Please enter a department name';
-                }
-            }
+            validate: dept => dept ? true : 'Please enter a department name'   
         }
     ]);
 
     const query = 'INSERT INTO department (name) VALUES (?)';
+
     db.query(query, result.dept, (err, results) => {
-        if(err) {
-            throw err;
-        } else {
-            console.log(`Successfully added new department: ${result.dept}.`);
-            viewDepartments();
-            loadTasks();
-        }
+
+        if(err) throw err;
+        
+        console.log(`Successfully added new department: ${result.dept}.`);
+        viewDepartments();
+        
     })
 
 }
 
 function viewEmployees() {
+
     const query = `SELECT employee.id,
                           employee.first_name, 
                           employee.last_name, 
@@ -255,7 +242,8 @@ function viewEmployees() {
                           INNER JOIN department ON role.department_id = department.id LEFT JOIN employee manager ON employee.manager_id = manager.id`;
 
     db.query(query, (err, results) => {
-        if(err) console.error(err);
+
+        if(err) throw err;
 
         console.table(results);
         loadTasks();
@@ -266,6 +254,9 @@ function viewRoles() {
     const query = 'SELECT role.id, role.title, department.name AS department, role.salary FROM role INNER JOIN department ON role.department_id = department.id';
 
     db.query(query, (err, results) => {
+
+        if(err) throw err;
+
         console.table(results);
         loadTasks();
     })
@@ -273,16 +264,21 @@ function viewRoles() {
 
 function viewDepartments() {
     db.query('SELECT id, name FROM department', (err, results) => {
+
+        if(err) throw err;
+        
         console.table(results);
         loadTasks();
     })
 }
 
+// ends database connection
 function exitDb() {
     db.end();
     console.log("Exited Employee Database.")
 }
 
+// start application
 function init() {
   console.log('|=================================|');
   console.log('|                                 |');
