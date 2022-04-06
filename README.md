@@ -1,5 +1,4 @@
 # Employee Management System
-# Note Taker
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) 
 
 * An employee management system that allows users to manage their company's employee database:
