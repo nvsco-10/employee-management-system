@@ -26,7 +26,7 @@
 
 * The application is extremely user-friendly. Use arrow keys to move up and down.
 * You will be presented with a series of options to navigate the employee database. Some will require user input to display information.
-<br>
+
     - View all departments
     - View all roles
     - View employees by department
